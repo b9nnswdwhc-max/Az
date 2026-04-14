@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Arbeitszeit">
+<title>Arbeitszeit</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#090909;--card:#111;--border:#1e1e1e;--border2:#2a2a2a;--accent:#00e5ff;--accent2:#ff6b35;--green:#00ff88;--red:#ff3b3b;--yellow:#ffd60a;--text:#f0f0f0;--muted:#4a4a4a;--muted2:#1c1c1c;--mono:'DM Mono',monospace;--dis:'Syne',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;overflow-x:hidden}
+.nav{display:flex;position:sticky;top:0;z-index:100;background:rgba(9,9,9,.97);backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
+.nav-btn{flex:1;background:none;border:none;color:var(--muted);font-family:var(--mono);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;padding:14px 2px 12px;cursor:pointer;border-bottom:2px solid transparent;transition:color .15s,border-color .15s}
+.nav-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.view{display:none;padding:18px 15px 100px;animation:fi .2s ease}
+.view.active{display:block}
+@keyframes fi{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.page-title{font-family:var(--dis);font-size:1.55rem;font-weight:800;letter-spacing:-.02em;line-height:1}
+.page-sub{font-size:.67rem;color:var(--muted);letter-spacing:.08em;margin-top:3px;margin-bottom:18px}
+
+/* GPS STATUS */
+.gps-bar{display:flex;align-items:center;gap:10px;padding:10px 13px;background:var(--card);border:1px solid var(--border);margin-bottom:14px}
+.gps-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;transition:background .3s}
+.gps-dot.on{background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 2s infinite}
+.gps-dot.warn{background:var(--yellow)}
+.gps-dot.off{background:var(--muted)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+.gps-info{flex:1}
+.gps-name{font-size:.74rem;color:var(--text);font-weight:500}
+.gps-status{font-size:.6rem;color:var(--muted);margin-top:1px}
+.gps-link{font-size:.62rem;color:var(--accent);cursor:pointer;text-decoration:underline;white-space:nowrap;background:none;border:none;font-family:var(--mono);padding:0}
+
+/* STAMP */
+.stamp-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.stamp-btn{background:var(--card);border:1px solid var(--border);color:var(--text);font-family:var(--dis);font-weight:700;padding:16px 12px;cursor:pointer;text-align:left;transition:transform .1s;-webkit-appearance:none;border-radius:0;width:100%}
+.stamp-btn:active{transform:scale(.97)}
+.stamp-btn.s{border-top:3px solid var(--accent)}
+.stamp-btn.e{border-top:3px solid var(--accent2)}
+.btn-lbl{font-size:.57rem;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;display:block;margin-bottom:3px}
+.btn-time{font-family:var(--mono);font-size:1.35rem;font-weight:500;display:block}
+.stamp-btn.s .btn-time{color:var(--accent)}
+.stamp-btn.e .btn-time{color:var(--accent2)}
+.btn-auto{font-size:.52rem;color:var(--muted);margin-top:2px;display:block}
+
+/* WEEK */
+.week-card{background:var(--card);border:1px solid var(--border);margin-bottom:14px}
+.wk-nav{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border-bottom:1px solid var(--border)}
+.wk-nav button{background:none;border:1px solid var(--border);color:var(--text);width:28px;height:28px;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.wk-info{text-align:center}
+.wk-kw{font-family:var(--dis);font-size:.7rem;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase}
+.wk-dr{font-size:.6rem;color:var(--muted);margin-top:1px}
+.day-row{border-bottom:1px solid var(--border);padding:10px 13px;display:grid;grid-template-columns:50px 1fr auto;align-items:center;gap:9px;cursor:pointer;transition:background .1s}
+.day-row:last-child{border-bottom:none}
+.day-row:active{background:var(--muted2)}
+.day-row.today{background:rgba(0,229,255,.04)}
+.day-row.today .dd{color:var(--accent)}
+.dd{font-family:var(--dis);font-size:.67rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;line-height:1.3}
+.dd span{display:block;font-size:.92rem;color:var(--text)}
+.dt .tl{font-family:var(--mono);color:var(--text);font-size:.77rem}
+.dt .tl.empty{color:var(--border2)}
+.dt .badge{display:inline-block;font-size:.57rem;letter-spacing:.1em;text-transform:uppercase;padding:2px 6px;margin-top:2px}
+.dt .badge.urlaub{background:rgba(255,214,10,.1);color:var(--yellow)}
+.dt .badge.krank{background:rgba(255,59,59,.09);color:var(--red)}
+.dt .badge.auto{background:rgba(0,229,255,.08);color:var(--accent);font-size:.5rem}
+.dn{text-align:right}
+.dn .nt{font-family:var(--mono);font-size:.82rem;color:var(--green);font-weight:500}
+.dn .nt.minus{color:var(--red)}
+.dn .nt.neutral{color:var(--muted)}
+.dn .nd{font-size:.57rem;color:var(--muted);margin-top:1px}
+.dn .nd.plus{color:var(--green)}
+.dn .nd.minus{color:var(--red)}
+.wk-sum{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid var(--border)}
+.sb{padding:11px 13px;border-right:1px solid var(--border)}
+.sb:last-child{border-right:none}
+.sb-l{font-size:.55rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px}
+.sb-v{font-family:var(--mono);font-size:.9rem;font-weight:500}
+.sb-v.plus{color:var(--green)}
+.sb-v.minus{color:var(--red)}
+
+/* MODAL */
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:200;align-items:flex-end;justify-content:center}
+.modal-ov.open{display:flex}
+.modal{background:var(--card);border:1px solid var(--border2);border-bottom:none;width:100%;max-width:480px;padding:22px 18px 44px;animation:su .22s ease}
+@keyframes su{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-title{font-family:var(--dis);font-size:1rem;font-weight:700;margin-bottom:16px}
+.modal-title span{color:var(--accent)}
+.sp-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px}
+.sp-btn{background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:.68rem;padding:10px 6px;cursor:pointer;text-transform:uppercase;letter-spacing:.08em}
+.sp-btn.sel{background:var(--muted2);color:var(--text);border-color:var(--border2)}
+.sp-btn.sel.urlaub{background:rgba(255,214,10,.1);color:var(--yellow);border-color:var(--yellow)}
+.sp-btn.sel.krank{background:rgba(255,59,59,.09);color:var(--red);border-color:var(--red)}
+.fl{margin-bottom:13px}
+.fl-lbl{font-size:.57rem;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:5px}
+.fl-inp{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:1.1rem;padding:10px 12px;width:100%;outline:none;border-radius:0;-webkit-appearance:none}
+.fl-inp:focus{border-color:var(--accent)}
+.modal-acts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+.mb{background:none;border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:.72rem;padding:12px;cursor:pointer;text-transform:uppercase;letter-spacing:.08em}
+.mb.save{background:var(--accent);border-color:var(--accent);color:#000;font-weight:600}
+.mb.del{border-color:var(--red);color:var(--red)}
+
+/* SETUP */
+.setup-hero{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent);padding:14px 15px;margin-bottom:16px;font-size:.72rem;color:#aaa;line-height:1.7}
+.setup-hero strong{color:var(--text);display:block;font-family:var(--dis);font-size:.9rem;font-weight:700;margin-bottom:4px}
+.setup-hero .radius-badge{display:inline-block;background:rgba(0,229,255,.1);color:var(--accent);font-family:var(--mono);font-size:.7rem;padding:3px 8px;margin-top:6px;border:1px solid rgba(0,229,255,.2)}
+.step{border:1px solid var(--border);background:var(--card);margin-bottom:8px;overflow:hidden}
+.step-hd{display:flex;align-items:center;gap:11px;padding:13px 15px;cursor:pointer;user-select:none}
+.step-n{width:24px;height:24px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:.65rem;font-weight:600;background:var(--muted2);color:var(--muted);border:1px solid var(--border2)}
+.step-n.done{background:rgba(0,255,136,.1);color:var(--green);border-color:var(--green)}
+.step-n.act{background:rgba(0,229,255,.1);color:var(--accent);border-color:var(--accent)}
+.step-txt{flex:1}
+.step-txt .sl{font-family:var(--dis);font-size:.8rem;font-weight:700}
+.step-txt .ss{font-size:.6rem;color:var(--muted);margin-top:1px}
+.step-arr{color:var(--muted);font-size:.75rem}
+.step-body{display:none;padding:0 15px 15px;border-top:1px solid var(--border)}
+.step-body.open{display:block}
+.inst{display:flex;gap:9px;padding:9px 0;border-bottom:1px solid var(--border);font-size:.73rem;line-height:1.6}
+.inst:last-child{border-bottom:none}
+.inst-n{color:var(--accent);font-weight:600;flex-shrink:0;width:16px;padding-top:1px}
+.inst-t{color:#bbb}
+.inst-t strong{color:var(--text)}
+.inst-t code{background:var(--muted2);color:var(--accent);padding:1px 5px;font-family:var(--mono);font-size:.7rem}
+.inst-t .val{color:var(--green);font-weight:600}
+.url-lbl{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin:10px 0 3px}
+.url-box{background:var(--bg);border:1px solid var(--border2);border-left:3px solid var(--accent);padding:10px 12px;font-family:var(--mono);font-size:.7rem;color:var(--accent);word-break:break-all;margin-bottom:4px;cursor:pointer;user-select:all}
+.copy-btn{background:none;border:1px solid var(--border2);color:var(--accent);font-family:var(--mono);font-size:.63rem;padding:7px 12px;cursor:pointer;text-transform:uppercase;letter-spacing:.08em;width:100%;margin-bottom:8px}
+.copy-btn:active{background:var(--accent);color:#000}
+.note{background:rgba(0,229,255,.04);border:1px solid rgba(0,229,255,.12);padding:11px 13px;font-size:.7rem;color:#999;line-height:1.65;margin-top:8px}
+.note strong{color:var(--accent)}
+.note.warn{background:rgba(255,214,10,.04);border-color:rgba(255,214,10,.15)}
+.note.warn strong{color:var(--yellow)}
+.note.green{background:rgba(0,255,136,.04);border-color:rgba(0,255,136,.15)}
+.note.green strong{color:var(--green)}
+.step-done-btn{background:none;border:1px solid var(--green);color:var(--green);font-family:var(--mono);font-size:.7rem;padding:10px;width:100%;cursor:pointer;text-transform:uppercase;letter-spacing:.1em;margin-top:12px}
+.step-done-btn:active{background:var(--green);color:#000}
+
+/* YEAR */
+.yr-sel{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.yr-sel button{background:none;border:1px solid var(--border);color:var(--text);width:30px;height:30px;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center}
+.yr-val{font-family:var(--dis);font-size:1.4rem;font-weight:800;flex:1;text-align:center}
+.yr-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:16px}
+.sc{background:var(--card);border:1px solid var(--border);padding:13px}
+.sc-l{font-size:.57rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}
+.sc-v{font-family:var(--mono);font-size:1.2rem;font-weight:500}
+.sc-v.plus{color:var(--green)}.sc-v.minus{color:var(--red)}.sc-v.blu{color:var(--accent)}.sc-v.yel{color:var(--yellow)}.sc-v.red{color:var(--red)}
+.sc-s{font-size:.6rem;color:var(--muted);margin-top:2px}
+.m-list{display:flex;flex-direction:column;gap:2px}
+.mi{background:var(--card);border:1px solid var(--border);padding:10px 13px;display:grid;grid-template-columns:72px 1fr 78px;align-items:center;gap:9px}
+.mi-nm{font-family:var(--dis);font-size:.77rem;font-weight:700}
+.mi-bw{height:3px;background:var(--muted2);position:relative}
+.mi-b{position:absolute;left:0;top:0;height:100%;transition:width .4s}
+.mi-b.over{background:var(--green)}.mi-b.under{background:var(--red)}.mi-b.even{background:var(--accent)}
+.mi-h{font-family:var(--mono);font-size:.72rem;text-align:right}
+.mi-h .d{font-size:.6rem}
+.mi-h .d.plus{color:var(--green)}.mi-h .d.minus{color:var(--red)}
+
+/* MAIL */
+.mail-card{background:var(--card);border:1px solid var(--border);padding:16px 15px;margin-bottom:13px}
+.mail-card h3{font-family:var(--dis);font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:11px}
+.mail-inp{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:.87rem;padding:10px 11px;width:100%;outline:none;border-radius:0;-webkit-appearance:none;margin-bottom:9px}
+.mail-inp:focus{border-color:var(--accent)}
+.act-btn{background:none;border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:.7rem;padding:12px 13px;cursor:pointer;text-transform:uppercase;letter-spacing:.09em;width:100%;margin-bottom:7px;text-align:left;display:flex;justify-content:space-between;align-items:center}
+.act-btn:active{border-color:var(--accent);color:var(--accent)}
+.act-btn.primary{background:var(--accent);border-color:var(--accent);color:#000;font-weight:600}
+.mail-prev{background:var(--bg);border:1px solid var(--border);padding:11px;font-family:var(--mono);font-size:.7rem;line-height:1.9;color:#666;white-space:pre;overflow-x:auto;margin-top:9px}
+
+/* AUTO OVERLAY */
+.auto-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.97);z-index:400;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px}
+.auto-ov.open{display:flex;animation:fi .3s ease}
+.auto-icon{font-size:2.5rem;margin-bottom:10px}
+.auto-type{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.15em;margin-bottom:5px}
+.auto-title{font-family:var(--dis);font-size:1.8rem;font-weight:800;margin-bottom:3px}
+.auto-sub{font-size:.7rem;color:var(--muted);margin-bottom:18px}
+.auto-time{font-family:var(--mono);font-size:3.2rem;font-weight:300;color:var(--accent);line-height:1;margin-bottom:12px}
+.auto-cd{font-size:.63rem;color:var(--muted);margin-bottom:22px;letter-spacing:.1em}
+.auto-confirm{background:var(--accent);border:none;color:#000;font-family:var(--dis);font-size:.9rem;font-weight:700;padding:16px;cursor:pointer;letter-spacing:.06em;width:100%;max-width:300px;margin-bottom:10px}
+.auto-cancel{background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:.68rem;padding:11px;cursor:pointer;text-transform:uppercase;letter-spacing:.08em;width:100%;max-width:300px}
+
+/* TOAST */
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--card);border:1px solid var(--accent);color:var(--accent);font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;padding:9px 18px;transition:transform .22s ease;pointer-events:none;white-space:nowrap;z-index:999}
+.toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <button class="nav-btn active" onclick="showView('woche',this)">Woche</button>
+  <button class="nav-btn" onclick="showView('jahr',this)">Jahr</button>
+  <button class="nav-btn" onclick="showView('mail',this)">Mail</button>
+  <button class="nav-btn" onclick="showView('setup',this)">Setup</button>
+</nav>
+
+<!-- WOCHE -->
+<div class="view active" id="view-woche">
+  <div class="page-title">Arbeitszeit</div>
+  <div class="page-sub">39h Woche &middot; 7:48 Tag &middot; 60 Min Fahrweg</div>
+
+  <div class="gps-bar">
+    <div class="gps-dot off" id="gpsDot"></div>
+    <div class="gps-info">
+      <div class="gps-name">GPS Standort-Trigger</div>
+      <div class="gps-status" id="gpsStatus">Automatisierung einrichten</div>
+    </div>
+    <button class="gps-link" onclick="showView('setup',document.querySelectorAll('.nav-btn')[3])">Setup</button>
+  </div>
+
+  <div class="stamp-row">
+    <button class="stamp-btn s" onclick="stampNow('start')">
+      <span class="btn-lbl">Abfahrt</span>
+      <span class="btn-time" id="stampStart">--:--</span>
+      <span class="btn-auto" id="startAuto">Tippen zum Stempeln</span>
+    </button>
+    <button class="stamp-btn e" onclick="stampNow('end')">
+      <span class="btn-lbl">Ankunft</span>
+      <span class="btn-time" id="stampEnd">--:--</span>
+      <span class="btn-auto" id="endAuto">Tippen zum Stempeln</span>
+    </button>
+  </div>
+
+  <div class="week-card">
+    <div class="wk-nav">
+      <button onclick="changeWeek(-1)">&#8592;</button>
+      <div class="wk-info">
+        <div class="wk-kw" id="kwLabel">KW --</div>
+        <div class="wk-dr" id="drLabel"></div>
+      </div>
+      <button onclick="changeWeek(1)">&#8594;</button>
+    </div>
+    <div id="daysList"></div>
+    <div class="wk-sum" id="wkSum"></div>
+  </div>
+</div>
+
+<!-- JAHR -->
+<div class="view" id="view-jahr">
+  <div class="page-title">Jahresuebersicht</div>
+  <div class="page-sub">Saldo &middot; Urlaub &middot; Krank &middot; Monate</div>
+  <div class="yr-sel">
+    <button onclick="changeYear(-1)">&#8592;</button>
+    <div class="yr-val" id="yrVal">2025</div>
+    <button onclick="changeYear(1)">&#8594;</button>
+  </div>
+  <div class="yr-grid" id="yrGrid"></div>
+  <div class="m-list" id="mList"></div>
+</div>
+
+<!-- MAIL -->
+<div class="view" id="view-mail">
+  <div class="page-title">Mail-Export</div>
+  <div class="page-sub">Wochenuebersicht versenden</div>
+  <div class="mail-card">
+    <h3>Empfaenger</h3>
+    <input class="mail-inp" type="email" id="mailAddr" placeholder="chef@firma.de" oninput="localStorage.setItem('az_mail',this.value)">
+    <button class="act-btn primary" onclick="sendMail(0)">Aktuelle Woche senden &#8594;</button>
+    <button class="act-btn" onclick="sendMail(-1)">Letzte Woche senden &#8594;</button>
+  </div>
+  <div class="mail-card">
+    <h3>Vorschau</h3>
+    <div class="mail-prev" id="mailPrev"></div>
+  </div>
+</div>
+
+<!-- SETUP -->
+<div class="view" id="view-setup">
+  <div class="page-title">GPS Setup</div>
+  <div class="page-sub">Standort-Automatisierung &middot; 5 Schritte</div>
+
+  <div class="setup-hero">
+    <strong>Wie es funktioniert</strong>
+    Deine Wohnadresse wird als Zone eingetragen. Verlasst du sie morgens, stempelt die App automatisch Abfahrt. Kommst du abends zuruck, stempelt sie Ankunft. Du musst nichts tippen.
+    <div class="radius-badge">Zone: 160 Meter Radius</div>
+  </div>
+
+  <!-- SCHRITT 1 -->
+  <div class="step" id="step1">
+    <div class="step-hd" onclick="toggleStep(1)">
+      <div class="step-n act" id="sn1">1</div>
+      <div class="step-txt"><div class="sl">App auf Homescreen speichern</div><div class="ss">Einmalig in Safari erledigen</div></div>
+      <div class="step-arr" id="sa1">&#9660;</div>
+    </div>
+    <div class="step-body open" id="sb1">
+      <div class="inst"><div class="inst-n">1</div><div class="inst-t">Diese Seite in <strong>Safari</strong> oeffnen</div></div>
+      <div class="inst"><div class="inst-n">2</div><div class="inst-t">Unten das <strong>Teilen-Symbol</strong> tippen (Kaestchen mit Pfeil)</div></div>
+      <div class="inst"><div class="inst-n">3</div><div class="inst-t"><strong>"Zum Home-Bildschirm"</strong> tippen</div></div>
+      <div class="inst"><div class="inst-n">4</div><div class="inst-t">Name <strong>Arbeitszeit</strong> lassen &rarr; <strong>Hinzufuegen</strong></div></div>
+      <div class="note"><strong>Warum:</strong> Nur als Homescreen-App kann der GPS-Kurzbefehl sie per URL starten und automatisch stempeln.</div>
+      <button class="step-done-btn" onclick="markDone(1)">Erledigt &mdash; weiter</button>
+    </div>
+  </div>
+
+  <!-- SCHRITT 2 -->
+  <div class="step" id="step2">
+    <div class="step-hd" onclick="toggleStep(2)">
+      <div class="step-n" id="sn2">2</div>
+      <div class="step-txt"><div class="sl">Kurzbefehl "AZ Abfahrt" erstellen</div><div class="ss">Kurzbefehle-App &middot; 1 Minute</div></div>
+      <div class="step-arr" id="sa2">&#9654;</div>
+    </div>
+    <div class="step-body" id="sb2">
+      <div class="inst"><div class="inst-n">1</div><div class="inst-t"><strong>Kurzbefehle-App</strong> oeffnen &rarr; oben rechts <strong>+</strong></div></div>
+      <div class="inst"><div class="inst-n">2</div><div class="inst-t">Oben auf den Namen tippen &rarr; eingeben: <code>AZ Abfahrt</code></div></div>
+      <div class="inst"><div class="inst-n">3</div><div class="inst-t"><strong>Aktion hinzufuegen</strong> &rarr; suchen: <code>URL oeffnen</code> &rarr; antippen</div></div>
+      <div class="inst"><div class="inst-n">4</div><div class="inst-t">Diese URL ins Feld eintragen (antippen zum Kopieren):</div></div>
+      <div class="url-lbl">Abfahrt-URL</div>
+      <div class="url-box" id="urlStart" onclick="copyUrl('start')">Wird geladen...</div>
+      <button class="copy-btn" onclick="copyUrl('start')">In Zwischenablage kopieren</button>
+      <div class="inst"><div class="inst-n">5</div><div class="inst-t">Oben rechts <strong>Fertig</strong> tippen</div></div>
+      <button class="step-done-btn" onclick="markDone(2)">Erledigt &mdash; weiter</button>
+    </div>
+  </div>
+
+  <!-- SCHRITT 3 -->
+  <div class="step" id="step3">
+    <div class="step-hd" onclick="toggleStep(3)">
+      <div class="step-n" id="sn3">3</div>
+      <div class="step-txt"><div class="sl">Kurzbefehl "AZ Ankunft" erstellen</div><div class="ss">Kurzbefehle-App &middot; 1 Minute</div></div>
+      <div class="step-arr" id="sa3">&#9654;</div>
+    </div>
+    <div class="step-body" id="sb3">
+      <div class="inst"><div class="inst-n">1</div><div class="inst-t">Kurzbefehle-App &rarr; <strong>+</strong> &rarr; Name: <code>AZ Ankunft</code></div></div>
+      <div class="inst"><div class="inst-n">2</div><div class="inst-t"><strong>Aktion hinzufuegen</strong> &rarr; <code>URL oeffnen</code></div></div>
+      <div class="inst"><div class="inst-n">3</div><div class="inst-t">Diese URL eintragen:</div></div>
+      <div class="url-lbl">Ankunft-URL</div>
+      <div class="url-box" id="urlEnd" onclick="copyUrl('end')">Wird geladen...</div>
+      <button class="copy-btn" onclick="copyUrl('end')">In Zwischenablage kopieren</button>
+      <div class="inst"><div class="inst-n">4</div><div class="inst-t">Oben rechts <strong>Fertig</strong> tippen</div></div>
+      <button class="step-done-btn" onclick="markDone(3)">Erledigt &mdash; weiter</button>
+    </div>
+  </div>
+
+  <!-- SCHRITT 4 -->
+  <div class="step" id="step4">
+    <div class="step-hd" onclick="toggleStep(4)">
+      <div class="step-n" id="sn4">4</div>
+      <div class="step-txt"><div class="sl">Automatisierung Abfahrt</div><div class="ss">Zone verlassen &rarr; stempelt automatisch</div></div>
+      <div class="step-arr" id="sa4">&#9654;</div>
+    </div>
+    <div class="step-body" id="sb4">
+      <div class="inst"><div class="inst-n">1</div><div class="inst-t">Kurzbefehle-App &rarr; unten <strong>Automatisierung</strong> &rarr; <strong>+</strong></div></div>
+      <div class="inst"><div class="inst-n">2</div><div class="inst-t"><strong>Neue persoenliche Automatisierung</strong> tippen</div></div>
+      <div class="inst"><div class="inst-n">3</div><div class="inst-t">Runterscrollen &rarr; <strong>"Ankunft/Abfahrt"</strong> auswaehlen</div></div>
+      <div class="inst"><div class="inst-n">4</div><div class="inst-t">Auf <strong>"Ort"</strong> tippen &rarr; deine <strong>Heimadresse</strong> in die Suche eingeben &rarr; auswaehlen</div></div>
+      <div class="inst"><div class="inst-n">5</div><div class="inst-t">Radius auf <span class="val">160 Meter</span> einstellen &mdash; den Schieberegler entsprechend ziehen</div></div>
+      <div class="inst"><div class="inst-n">6</div><div class="inst-t">Haken bei <span class="val">"Abfahrt"</span> setzen &mdash; nicht "Ankunft"</div></div>
+      <div class="inst"><div class="inst-n">7</div><div class="inst-t">Zeitrahmen aktivieren: <span class="val">Montag bis Freitag</span>, zwischen <span class="val">05:00 und 11:00</span></div></div>
+      <div class="inst"><div class="inst-n">8</div><div class="inst-t"><strong>Weiter</strong> &rarr; <strong>Aktion hinzufuegen</strong> &rarr; <code>Kurzbefehl ausfuehren</code> &rarr; <strong>AZ Abfahrt</strong></div></div>
+      <div class="inst"><div class="inst-n">9</div><div class="inst-t"><strong>Weiter</strong> &rarr; <strong>"Vor dem Ausfuehren fragen"</strong> ausschalten &rarr; <strong>Fertig</strong></div></div>
+      <div class="note warn"><strong>Zeitrahmen ist wichtig:</strong> Mo-Fr 05:00-11:00 stellt sicher dass nur morgens gestempelt wird. Wenn du abends noch mal kurz rausgehst passiert nichts.</div>
+      <button class="step-done-btn" onclick="markDone(4)">Erledigt &mdash; weiter</button>
+    </div>
+  </div>
+
+  <!-- SCHRITT 5 -->
+  <div class="step" id="step5">
+    <div class="step-hd" onclick="toggleStep(5)">
+      <div class="step-n" id="sn5">5</div>
+      <div class="step-txt"><div class="sl">Automatisierung Ankunft</div><div class="ss">Zone betreten &rarr; stempelt automatisch</div></div>
+      <div class="step-arr" id="sa5">&#9654;</div>
+    </div>
+    <div class="step-body" id="sb5">
+      <div class="inst"><div class="inst-n">1</div><div class="inst-t">Automatisierung &rarr; <strong>+</strong> &rarr; Neue persoenliche Automatisierung &rarr; <strong>Ankunft/Abfahrt</strong></div></div>
+      <div class="inst"><div class="inst-n">2</div><div class="inst-t">Gleiche <strong>Heimadresse</strong> auswaehlen &rarr; Radius: <span class="val">160 Meter</span></div></div>
+      <div class="inst"><div class="inst-n">3</div><div class="inst-t">Diesmal Haken bei <span class="val">"Ankunft"</span> setzen</div></div>
+      <div class="inst"><div class="inst-n">4</div><div class="inst-t">Zeitrahmen: <span class="val">Montag bis Freitag</span>, zwischen <span class="val">13:00 und 23:00</span></div></div>
+      <div class="inst"><div class="inst-n">5</div><div class="inst-t"><strong>Weiter</strong> &rarr; <strong>Kurzbefehl ausfuehren</strong> &rarr; <strong>AZ Ankunft</strong></div></div>
+      <div class="inst"><div class="inst-n">6</div><div class="inst-t"><strong>"Vor dem Ausfuehren fragen"</strong> ausschalten &rarr; <strong>Fertig</strong></div></div>
+      <div class="note green"><strong>Das war es.</strong> Ab jetzt laeuft alles automatisch. Morgens raus &rarr; Abfahrt gestempelt. Abends rein &rarr; Ankunft gestempelt. Krank oder Urlaub einfach in der App den Tag antippen und aendern.</div>
+      <button class="step-done-btn" onclick="markDone(5)">Setup abgeschlossen</button>
+    </div>
+  </div>
+
+  <div id="setupDone" style="display:none;margin-top:12px">
+    <div class="note green">
+      <strong>Alles eingerichtet.</strong> GPS-Zone 160m aktiv. Mo-Fr 05-11 Uhr Abfahrt, 13-23 Uhr Ankunft. Laeuft vollautomatisch.
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-ov" id="modalOv" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-title">Bearbeiten &mdash; <span id="modalDate"></span></div>
+    <div class="sp-btns">
+      <button class="sp-btn sel" id="btnNormal" onclick="setSpecial('normal')">Normal</button>
+      <button class="sp-btn urlaub" id="btnUrlaub" onclick="setSpecial('urlaub')">Urlaub</button>
+      <button class="sp-btn krank"  id="btnKrank"  onclick="setSpecial('krank')">Krank</button>
+    </div>
+    <div id="timeFields">
+      <div class="fl"><div class="fl-lbl">Abfahrt (zuhause)</div><input class="fl-inp" type="time" id="editStart"></div>
+      <div class="fl"><div class="fl-lbl">Ankunft (zuhause)</div><input class="fl-inp" type="time" id="editEnd"></div>
+    </div>
+    <div class="modal-acts">
+      <button class="mb del" onclick="deleteEntry()">Loeschen</button>
+      <button class="mb save" onclick="saveEntry()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- AUTO STAMP OVERLAY -->
+<div class="auto-ov" id="autoOv">
+  <div class="auto-icon">&#9651;</div>
+  <div class="auto-type">GPS Standort erkannt</div>
+  <div class="auto-title" id="autoTitle">Abfahrt</div>
+  <div class="auto-sub" id="autoSub">Zone verlassen</div>
+  <div class="auto-time" id="autoTime">--:--</div>
+  <div class="auto-cd" id="autoCd">Automatisch in 4 Sekunden...</div>
+  <button class="auto-confirm" onclick="confirmAuto()">Jetzt stempeln</button>
+  <button class="auto-cancel" onclick="cancelAuto()">Abbrechen</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SOLL_W=39*60,SOLL_D=468,FAW=60;
+const TAGE=['So','Mo','Di','Mi','Do','Fr','Sa'];
+const MON_L=['Januar','Februar','Maerz','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+let wOff=0,yrView=new Date().getFullYear(),editDate=null,editSp='normal',pendingAction=null,cdTimer=null;
+
+const get=k=>{try{return JSON.parse(localStorage.getItem('az_'+k))||null}catch{return null}};
+const set=(k,v)=>v===null?localStorage.removeItem('az_'+k):localStorage.setItem('az_'+k,JSON.stringify(v));
+
+function monday(d){const x=new Date(d),dy=x.getDay(),df=dy===0?-6:1-dy;x.setDate(x.getDate()+df);x.setHours(0,0,0,0);return x}
+function fmt(d){return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')}
+function ds(d){return d.toISOString().slice(0,10)}
+function kw(d){const u=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())),dn=u.getUTCDay()||7;u.setUTCDate(u.getUTCDate()+4-dn);const y=new Date(Date.UTC(u.getUTCFullYear(),0,1));return Math.ceil((((u-y)/86400000)+1)/7)}
+function pt(s){if(!s)return null;const[h,m]=s.split(':').map(Number);return isNaN(h)||isNaN(m)?null:h*60+m}
+function ms(min){if(min===null||isNaN(min))return'--:--';const n=min<0,a=Math.abs(min);return(n?'-':'')+Math.floor(a/60)+':'+String(a%60).padStart(2,'0')}
+function net(e){if(!e)return null;if(e.type==='urlaub'||e.type==='krank')return SOLL_D;if(!e.start||!e.end)return null;const g=pt(e.end)-pt(e.start);return g>0?Math.max(0,g-FAW):null}
+function nowT(){const n=new Date();return String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0')}
+function appUrl(){return window.location.href.split('?')[0]}
+function triggerUrl(a){return appUrl()+'?action='+a}
+
+function updateGpsDot(){
+  const done=parseInt(localStorage.getItem('az_setup_done')||'0');
+  const dot=document.getElementById('gpsDot'),st=document.getElementById('gpsStatus');
+  if(done>=5){dot.className='gps-dot on';st.textContent='Aktiv - GPS Zone 160m eingerichtet';}
+  else if(done>0){dot.className='gps-dot warn';st.textContent='Setup '+done+'/5 Schritte - fortsetzen';}
+  else{dot.className='gps-dot off';st.textContent='Noch nicht eingerichtet';}
+}
+
+function renderWeek(){
+  const today=new Date();today.setHours(0,0,0,0);
+  const mon=monday(new Date());mon.setDate(mon.getDate()+wOff*7);
+  const fri=new Date(mon);fri.setDate(mon.getDate()+4);
+  document.getElementById('kwLabel').textContent='KW '+kw(mon);
+  document.getElementById('drLabel').textContent=fmt(mon)+' - '+fmt(fri)+'.'+mon.getFullYear();
+  const te=get(ds(today));
+  document.getElementById('stampStart').textContent=te?.start||'--:--';
+  document.getElementById('stampEnd').textContent=te?.end||'--:--';
+  document.getElementById('startAuto').textContent=te?.auto_start?'GPS Auto gestempelt':'Tippen zum Stempeln';
+  document.getElementById('endAuto').textContent=te?.auto_end?'GPS Auto gestempelt':'Tippen zum Stempeln';
+  let html='',wNet=0;
+  for(let i=0;i<5;i++){
+    const day=new Date(mon);day.setDate(mon.getDate()+i);
+    const dstr=ds(day),e=get(dstr),n=net(e),isToday=day.getTime()===today.getTime();
+    if(n!==null)wNet+=n;
+    let tH='';
+    if(e?.type==='urlaub')tH='<span class="badge urlaub">Urlaub</span>';
+    else if(e?.type==='krank')tH='<span class="badge krank">Krank</span>';
+    else if(e?.start||e?.end){
+      tH=`<span class="tl">${e?.start||'??:??'} - ${e?.end||'??:??'}</span>`;
+      if(e?.auto_start||e?.auto_end)tH+='<span class="badge auto">GPS Auto</span>';
+    }else tH='<span class="tl empty">-</span>';
+    let nH='';
+    if(n!==null){const df=n-SOLL_D,dc=df>=0?'plus':'minus';nH=`<span class="nt">${ms(n)}</span><div class="nd ${dc}">${df>=0?'+':''}${ms(df)}</div>`;}
+    else nH='<span class="nt neutral">-</span>';
+    html+=`<div class="day-row${isToday?' today':''}" onclick="openEdit('${dstr}')"><div class="dd"><span>${fmt(day)}</span>${TAGE[day.getDay()]}.</div><div class="dt">${tH}</div><div class="dn">${nH}</div></div>`;
+  }
+  document.getElementById('daysList').innerHTML=html;
+  const sal=wNet-SOLL_W,sc=sal>=0?'plus':'minus';
+  document.getElementById('wkSum').innerHTML=`<div class="sb"><div class="sb-l">Ist</div><div class="sb-v">${ms(wNet)}</div></div><div class="sb"><div class="sb-l">Soll</div><div class="sb-v">39:00</div></div><div class="sb"><div class="sb-l">Saldo</div><div class="sb-v ${sc}">${sal>=0?'+':''}${ms(sal)}</div></div>`;
+  updateGpsDot();
+}
+function changeWeek(d){wOff+=d;renderWeek()}
+
+function stampNow(field,auto=false){
+  const now=new Date(),today=new Date();today.setHours(0,0,0,0);
+  if(now.getDay()===0||now.getDay()===6){showToast('Wochenende');return}
+  const dstr=ds(today),e=get(dstr)||{};
+  if(e.type==='urlaub'||e.type==='krank'){showToast('Tag als '+e.type+' markiert');return}
+  const t=nowT();e[field]=t;if(auto)e['auto_'+field]=true;
+  set(dstr,e);wOff=0;renderWeek();
+  showToast((field==='start'?'Abfahrt: ':'Ankunft: ')+t);
+}
+
+function showAutoOverlay(action){
+  pendingAction=action;
+  const isStart=action==='start';
+  document.getElementById('autoTitle').textContent=isStart?'Abfahrt':'Ankunft';
+  document.getElementById('autoSub').textContent=isStart?'Zone verlassen':'Zone betreten';
+  document.getElementById('autoTime').textContent=nowT();
+  document.getElementById('autoOv').classList.add('open');
+  let sec=4;
+  document.getElementById('autoCd').textContent='Automatisch in '+sec+' Sekunden...';
+  cdTimer=setInterval(()=>{
+    sec--;
+    if(sec>0)document.getElementById('autoCd').textContent='Automatisch in '+sec+' Sekunden...';
+    else{clearInterval(cdTimer);confirmAuto();}
+  },1000);
+}
+function confirmAuto(){
+  clearInterval(cdTimer);
+  if(!pendingAction)return;
+  stampNow(pendingAction,true);
+  document.getElementById('autoOv').classList.remove('open');
+  pendingAction=null;
+  window.history.replaceState({},'',appUrl());
+}
+function cancelAuto(){
+  clearInterval(cdTimer);
+  document.getElementById('autoOv').classList.remove('open');
+  pendingAction=null;
+  window.history.replaceState({},'',appUrl());
+}
+
+function openEdit(dstr){
+  editDate=dstr;const d=new Date(dstr),e=get(dstr)||{};
+  document.getElementById('modalDate').textContent=fmt(d)+' '+TAGE[d.getDay()]+'.';
+  document.getElementById('editStart').value=e.start||'';
+  document.getElementById('editEnd').value=e.end||'';
+  setSpecial(e.type||'normal');
+  document.getElementById('modalOv').classList.add('open');
+}
+function setSpecial(type){
+  editSp=type;
+  ['normal','urlaub','krank'].forEach(t=>{
+    const b=document.getElementById('btn'+t.charAt(0).toUpperCase()+t.slice(1));
+    b.className='sp-btn'+(t!=='normal'?' '+t:'')+(t===type?' sel':'');
+  });
+  document.getElementById('timeFields').style.display=type==='normal'?'block':'none';
+}
+function saveEntry(){
+  if(!editDate)return;
+  const e={};
+  if(editSp!=='normal')e.type=editSp;
+  else{e.start=document.getElementById('editStart').value;e.end=document.getElementById('editEnd').value;}
+  set(editDate,e);closeModal();renderWeek();renderYear();showToast('Gespeichert');
+}
+function deleteEntry(){if(!editDate)return;set(editDate,null);closeModal();renderWeek();renderYear();showToast('Geloescht')}
+function closeModal(){document.getElementById('modalOv').classList.remove('open')}
+
+function toggleStep(n){
+  const b=document.getElementById('sb'+n),a=document.getElementById('sa'+n);
+  const o=b.classList.toggle('open');
+  a.textContent=o?'▼':'▶';
+}
+function markDone(n){
+  document.getElementById('sn'+n).className='step-n done';
+  document.getElementById('sn'+n).textContent='✓';
+  localStorage.setItem('az_setup_done',String(n));
+  toggleStep(n);
+  if(n<5){
+    const nb=document.getElementById('sb'+(n+1));
+    if(nb){nb.classList.add('open');document.getElementById('sa'+(n+1)).textContent='▼';document.getElementById('sn'+(n+1)).className='step-n act';}
+  }else{
+    document.getElementById('setupDone').style.display='block';
+  }
+  updateGpsDot();showToast('Schritt '+n+' erledigt');
+}
+function loadSetup(){
+  const done=parseInt(localStorage.getItem('az_setup_done')||'0');
+  for(let i=1;i<=5;i++){
+    const n=document.getElementById('sn'+i),b=document.getElementById('sb'+i),a=document.getElementById('sa'+i);
+    if(i<=done){if(n){n.className='step-n done';n.textContent='✓';}if(b)b.classList.remove('open');if(a)a.textContent='▶';}
+  }
+  if(done>=5)document.getElementById('setupDone').style.display='block';
+  if(done===0){document.getElementById('sb1').classList.add('open');document.getElementById('sa1').textContent='▼';}
+  else if(done<5){
+    const nb=document.getElementById('sb'+(done+1));
+    if(nb){nb.classList.add('open');document.getElementById('sa'+(done+1)).textContent='▼';document.getElementById('sn'+(done+1)).className='step-n act';}
+  }
+  document.getElementById('urlStart').textContent=triggerUrl('start');
+  document.getElementById('urlEnd').textContent=triggerUrl('end');
+}
+function copyUrl(type){
+  const url=triggerUrl(type);
+  if(navigator.clipboard){navigator.clipboard.writeText(url).then(()=>showToast('URL kopiert'));}
+  else{const el=document.createElement('textarea');el.value=url;document.body.appendChild(el);el.select();document.execCommand('copy');document.body.removeChild(el);showToast('URL kopiert');}
+}
+
+function changeYear(d){yrView+=d;document.getElementById('yrVal').textContent=yrView;renderYear()}
+function renderYear(){
+  let tNet=0,tUrl=0,tKrk=0,wDone=0;
+  const mD=Array.from({length:12},()=>({net:0,soll:0}));
+  const d=new Date(yrView,0,1);
+  while(d.getFullYear()===yrView){
+    const dw=d.getDay();
+    if(dw>=1&&dw<=5){
+      const m=d.getMonth(),e=get(ds(d)),n=net(e);
+      mD[m].soll+=SOLL_D;
+      if(n!==null){tNet+=n;mD[m].net+=n;wDone++;if(e?.type==='urlaub')tUrl++;if(e?.type==='krank')tKrk++;}
+    }
+    d.setDate(d.getDate()+1);
+  }
+  const sal=tNet-(wDone*SOLL_D),sc=sal>=0?'plus':'minus';
+  document.getElementById('yrGrid').innerHTML=`
+    <div class="sc"><div class="sc-l">Gesamtstunden ${yrView}</div><div class="sc-v blu">${ms(tNet)}</div><div class="sc-s">${wDone} Tage erfasst</div></div>
+    <div class="sc"><div class="sc-l">Jahressaldo</div><div class="sc-v ${sc}">${sal>=0?'+':''}${ms(sal)}</div><div class="sc-s">vs. Soll</div></div>
+    <div class="sc"><div class="sc-l">Urlaubstage</div><div class="sc-v yel">${tUrl}</div></div>
+    <div class="sc"><div class="sc-l">Kranktage</div><div class="sc-v red">${tKrk}</div></div>`;
+  let mH='';
+  MON_L.forEach((nm,i)=>{
+    const md=mD[i];if(!md.soll&&!md.net)return;
+    const df=md.net-md.soll,dfs=(df>=0?'+':'')+ms(df),dfc=df>=0?'plus':'minus';
+    const pct=Math.min(100,(md.net/Math.max(md.soll,1))*100),bc=df>0?'over':df<0?'under':'even';
+    mH+=`<div class="mi"><div class="mi-nm">${nm}</div><div class="mi-bw"><div class="mi-b ${bc}" style="width:${pct}%"></div></div><div class="mi-h">${ms(md.net)}<br><span class="d ${dfc}">${dfs}</span></div></div>`;
+  });
+  document.getElementById('mList').innerHTML=mH||`<div style="color:var(--muted);font-size:.78rem;padding:16px">Noch keine Daten fuer ${yrView}</div>`;
+}
+
+function buildMail(off){
+  const mon=monday(new Date());mon.setDate(mon.getDate()+off*7);
+  const fri=new Date(mon);fri.setDate(mon.getDate()+4);
+  let lines=[`Arbeitszeit KW ${kw(mon)}`,`${fmt(mon)}.${mon.getFullYear()} - ${fmt(fri)}.${fri.getFullYear()}`,''];
+  let wNet=0;
+  for(let i=0;i<5;i++){
+    const day=new Date(mon);day.setDate(mon.getDate()+i);
+    const e=get(ds(day)),n=net(e);
+    let line=`${fmt(day)} ${TAGE[day.getDay()]}.  `;
+    if(e?.type==='urlaub')line+='[Urlaub]        7:48';
+    else if(e?.type==='krank')line+='[Krank]         7:48';
+    else if(e?.start&&e?.end)line+=`${e.start} - ${e.end}    Netto: ${ms(n)}`;
+    else line+='-';
+    lines.push(line);if(n!==null)wNet+=n;
+  }
+  const sal=wNet-SOLL_W;
+  lines.push('','-------------------------------',`Summe: ${ms(wNet)}   Soll: 39:00   Saldo: ${sal>=0?'+':''}${ms(sal)}`,'','(60 Min Fahrweg/Tag abgezogen)');
+  return lines.join('\n');
+}
+function sendMail(off){
+  const addr=document.getElementById('mailAddr').value.trim();
+  if(!addr){showToast('Email-Adresse eingeben');return}
+  const mon=monday(new Date());mon.setDate(mon.getDate()+off*7);
+  window.location.href=`mailto:${addr}?subject=${encodeURIComponent('Arbeitszeit KW '+kw(mon))}&body=${encodeURIComponent(buildMail(off))}`;
+}
+function updateMailView(){
+  document.getElementById('mailAddr').value=localStorage.getItem('az_mail')||'';
+  document.getElementById('mailPrev').textContent=buildMail(0);
+}
+
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
+
+function showView(id,btn){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('view-'+id).classList.add('active');
+  if(btn)btn.classList.add('active');
+  if(id==='jahr')renderYear();
+  if(id==='mail')updateMailView();
+  if(id==='setup')loadSetup();
+}
+
+// URL PARAMS - GPS Trigger
+(function(){
+  const p=new URLSearchParams(window.location.search),action=p.get('action');
+  if(action==='start'||action==='end'){
+    const now=new Date();
+    if(now.getDay()>=1&&now.getDay()<=5){
+      setTimeout(()=>showAutoOverlay(action),300);
+    }
+  }
+  if(action==='mail'){
+    setTimeout(()=>showView('mail',document.querySelectorAll('.nav-btn')[2]),200);
+  }
+})();
+
+renderWeek();
+</script>
+</body>
+</html>
